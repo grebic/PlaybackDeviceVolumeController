@@ -1,0 +1,100 @@
+using AudioSwitcher.AudioApi.CoreAudio;
+using System;
+using System.Drawing;
+using System.Linq;
+using System.Windows.Forms;
+
+
+namespace KwSound
+{
+    public partial class Form1 : Form
+    {
+        PlaybackDeviceControl[] playbackcontrols;
+
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        private void Form1_Load_1(object sender, EventArgs e)
+        {
+            var audio = new CoreAudioController();
+            var devices = audio.GetPlaybackDevices().ToArray();
+
+            playbackcontrols = new PlaybackDeviceControl[devices.Length];
+
+            for (int i = 0; i < devices.Length; i++)
+            {
+                playbackcontrols[i] = new PlaybackDeviceControl(i, devices[i]);
+                Controls.Add(playbackcontrols[i].Label);
+                Controls.Add(playbackcontrols[i].TrackBar);
+                Controls.Add(playbackcontrols[i].Check);
+            }
+        }
+    }
+
+    internal class PlaybackDeviceControl : Control
+    {
+        public int Instance { get; protected set; }
+        public CoreAudioDevice Device { get; protected set; }
+        public TrackBar TrackBar { get; protected set; }
+        public Label Label { get; protected set; }
+        public CheckBox Check { get; protected set; }
+
+        public PlaybackDeviceControl(int instance, CoreAudioDevice device)
+        {
+            Instance = instance;
+            Device = device;
+            
+            Top = 60 + instance * 40;
+
+            Label = new Label()
+            {
+                Text = device.Name,
+                AutoSize = true,
+                Location = new Point(20, this.Top),
+                Font = new Font("Chiller", 20, FontStyle.Bold)
+            };
+
+            TrackBar = new TrackBar()
+            {
+                Name = device.Name,
+                AutoSize = true,
+                Location = new Point(250, this.Top),
+                Minimum = 0,
+                Maximum = 100,
+                LargeChange = 25,
+                Value = device.Volume >= 0 ? (int)device.Volume : 0,
+            };
+
+            Check = new CheckBox()
+            {
+                Name = device.Name,
+                Location = new Point(350, this.Top),
+                Text = "Default",
+                Font = new Font("Chiller", 20, FontStyle.Bold),
+                AutoSize = true,
+            };
+
+            TrackBar.Scroll += TrackBar_Scroll;
+            Check.CheckedChanged += checkBox_CheckedChanged;
+
+            this.Controls.Add(Label);
+            this.Controls.Add(TrackBar);
+            this.Controls.Add(Check);
+        }
+
+        private void TrackBar_Scroll(object sender, EventArgs e)
+        {
+            var trackbar = (TrackBar)sender;
+            Device.Volume = trackbar.Value;
+        }
+
+        private void checkBox_CheckedChanged(object sender, EventArgs e)
+        {
+            var checkbox = (CheckBox)sender;
+            checkbox.Checked = Device.SetAsDefault();
+        }
+    }
+}
+
